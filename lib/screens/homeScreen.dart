@@ -1,5 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:graduation/screens/levelScreen.dart';
+import 'package:graduation/model/trak-model.dart';
+import 'package:graduation/network/trak-API.dart';
+import 'package:graduation/screens/admin_screen.dart';
+import 'package:graduation/network/dio_client.dart';
+import 'package:graduation/network/profile_api.dart';
 
 class Homescreen extends StatefulWidget {
   const Homescreen({super.key});
@@ -9,292 +14,317 @@ class Homescreen extends StatefulWidget {
 }
 
 class _HomescreenState extends State<Homescreen> {
-  bool _isPressed1 = false;
-  bool _isPressed2 = false;
+  bool isLoading = true;
+  List<TrackModel> tracks = [];
+  String userName = "";
+
+  @override
+  void initState() {
+    super.initState();
+    loadTracks();
+    getUserData();
+  }
+
+  Future<void> getUserData() async {
+    try {
+      final profile = await ProfileApi.getProfile();
+      if (!mounted) return;
+      setState(() => userName = profile.firstName);
+    } catch (e) {
+      print("GET USER ERROR: $e");
+    }
+  }
+
+  Future<void> loadTracks() async {
+    try {
+      final result = await TracksApi.getTracks();
+      if (!mounted) return;
+      setState(() {
+        tracks = result;
+        isLoading = false;
+      });
+    } catch (e) {
+      print("TRACKS ERROR: $e");
+      if (!mounted) return;
+      setState(() => isLoading = false);
+    }
+  }
+
+  String getTrackImage(int index) {
+    return index == 0 ? "images/img_1.png" : "images/img.png";
+  }
 
   @override
   Widget build(BuildContext context) {
+    final height = MediaQuery.of(context).size.height;
+    final isSmall = height < 750;
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: Stack(
         children: [
-
-          // 🔵 الخلفية تغطي كامل الشاشة
-          Container(
-            width: double.infinity,
-            height: 452,
-            decoration: const BoxDecoration(
-              image: DecorationImage(
-                image: AssetImage("images/Rectangle 189.png"),
-                fit: BoxFit.cover,
-              ),
+          SizedBox(
+            width: MediaQuery.of(context).size.width,
+            height: isSmall ? 380 : 452,
+            child: Image.asset(
+              "images/Rectangle 189.png",
+              fit: BoxFit.cover,
             ),
           ),
-
-          // ✨ محتوى الشاشة فوق الخلفية
-          SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 30, vertical: 60),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-
-                  // النص + الصورة
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
-                          Text(
-                            "Hi, Basma!",
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 22,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          SizedBox(height: 6),
-                          Text(
-                            "Lets get started with\n your journey",
-                            style: TextStyle(
-                              color: Colors.white70,
-                              fontSize: 15,
-                            ),
-                          ),
-                        ],
-                      ),
-                      Image.asset(
-                        "images/Ilustration - Home Page.png",
-                        width: 201,
-                        height: 178,
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 40),
-
-                  // الكارد الأبيض
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: Colors.white,
-                      borderRadius: const BorderRadius.only(
-                        topLeft: Radius.circular(25),
-                        topRight: Radius.circular(25),
-                        bottomLeft: Radius.circular(15),
-                        bottomRight: Radius.circular(15),
-                      ),
-                      boxShadow: const [
-                        BoxShadow(
-                          color: Colors.black12,
-                          blurRadius: 10,
-                          offset: Offset(0, 5),
-                        ),
-                      ],
+          LayoutBuilder(
+            builder: (context, constraints) {
+              return SingleChildScrollView(
+                child: ConstrainedBox(
+                  constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                  child: Padding(
+                    padding: EdgeInsets.symmetric(
+                      horizontal: 30,
+                      vertical: isSmall ? 40 : 60,
                     ),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
-                      children: const [
-                        Text(
-                          "Choose your track",
-                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                        ),
-                        SizedBox(height: 5),
-                        Text("Ready to Craft Your Code? let's start"),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 15),
-
-                  // 🔹 الكارد الداخلي للقناتين مع تأثير الضغط
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(12),
-                    decoration: BoxDecoration(
-                      color: Colors.grey[100],
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Column(
                       children: [
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Flexible(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    "Hi, ${userName.isEmpty ? "User" : userName}!",
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 22,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                  const SizedBox(height: 6),
+                                  const Text(
+                                    "Lets get started with\n your journey",
+                                    style: TextStyle(
+                                      color: Colors.white70,
+                                      fontSize: 15,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Image.asset(
+                              "images/Ilustration - Home Page.png",
+                              width: isSmall ? 150 : 201,
+                              height: isSmall ? 135 : 178,
+                            ),
+                          ],
+                        ),
 
-                        // 🔹 الكونتينر الأول
-                        GestureDetector(
-                          onTapDown: (_) => setState(() => _isPressed1 = true),
-                          onTapUp: (_) => setState(() => _isPressed1 = false),
-                          onTapCancel: () => setState(() => _isPressed1 = false),
-                          onTap: () {
-                            // هنا ممكن تضيفي وظيفة الضغط
-                          },
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 100),
-                            transform: _isPressed1
-                                ? (Matrix4.identity()..scale(0.97))
-                                : Matrix4.identity(),
-                            curve: Curves.easeOut,
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(15),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black12,
-                                  blurRadius: _isPressed1 ? 2 : 5,
-                                  offset: Offset(0, _isPressed1 ? 2 : 5),
-                                ),
-                              ],
+                        SizedBox(height: isSmall ? 25 : 40),
+
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: const BorderRadius.only(
+                              topLeft: Radius.circular(25),
+                              topRight: Radius.circular(25),
+                              bottomLeft: Radius.circular(15),
+                              bottomRight: Radius.circular(15),
                             ),
-                            child: Column(
-                              children: const [
-                                Image(
-                                  image: AssetImage("images/Rectangle 257.png"),
-                                  width: double.infinity,
-                                  fit: BoxFit.cover,
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Colors.black12,
+                                blurRadius: 10,
+                                offset: Offset(0, 5),
+                              ),
+                            ],
+                          ),
+                          child: const Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                "Choose your track",
+                                style: TextStyle(
+                                  fontSize: 20,
+                                  fontWeight: FontWeight.bold,
                                 ),
-                                SizedBox(height: 8),
-                                Text(
-                                  "UI Design",
-                                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                                ),
-                                SizedBox(height: 5),
-                                Text(
-                                  "Learn the basics of user interface design and improve your UX skills.",
-                                  style: TextStyle(fontSize: 14, color: Colors.black54),
-                                  textAlign: TextAlign.center,
-                                ),
-                              ],
-                            ),
+                              ),
+                              SizedBox(height: 5),
+                              Text("Ready to Craft Your Code? let's start"),
+                            ],
                           ),
                         ),
 
-                        const SizedBox(height: 12),
+                        const SizedBox(height: 15),
 
-                        // 🔹 الكونتينر الثاني
-                        GestureDetector(
-                          onTapDown: (_) => setState(() => _isPressed2 = true),
-                          onTapUp: (_) => setState(() => _isPressed2 = false),
-                          onTapCancel: () => setState(() => _isPressed2 = false),
-                          onTap: () {
-                            // هنا ممكن تضيفي وظيفة الضغط
-                          },
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 100),
-                            transform: _isPressed2
-                                ? (Matrix4.identity()..scale(0.97))
-                                : Matrix4.identity(),
-                            curve: Curves.easeOut,
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(8),
-                            decoration: BoxDecoration(
-                              color: Colors.white,
-                              borderRadius: BorderRadius.circular(15),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black12,
-                                  blurRadius: _isPressed2 ? 2 : 5,
-                                  offset: Offset(0, _isPressed2 ? 2 : 5),
-                                ),
-                              ],
-                            ),
-                            child: Column(
-                              children: const [
-                                Image(
-                                  image: AssetImage("images/Rectangle 257 (1).png"),
-                                  width: double.infinity,
-                                  fit: BoxFit.cover,
-                                ),
-                                SizedBox(height: 8),
-                                Text(
-                                  "Flutter",
-                                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                                ),
-                                SizedBox(height: 5),
-                                Text(
-                                  "Start building apps using Flutter and understand the core concepts quickly.",
-                                  style: TextStyle(fontSize: 14, color: Colors.black54),
-                                  textAlign: TextAlign.center,
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 40),
-
-                  // الدائرة + المستطيل
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Container(
-                        width: 60,
-                        height:60,
-                        decoration: BoxDecoration(
-                          color: Colors.grey[200],
-                          shape: BoxShape.circle,
-                        ),
-                        child: Center(
-                          child: Image.asset(
-                            "images/Reddit (1).png",
-                            width: 30,
-                            height: 30,
-                            fit: BoxFit.cover,
-                          ),
-                        ),
-                      ),
-                      const SizedBox(width: 10),
-                      Expanded(
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(12),
                           decoration: BoxDecoration(
                             color: Colors.grey[100],
-                            borderRadius: BorderRadius.circular(15),
+                            borderRadius: BorderRadius.circular(20),
                           ),
-                          child: const Text(
-                            "Let me know your goal, and I’ll guide you to the right lessons",
-                            style: TextStyle(fontSize: 14, color: Colors.black87),
+                          child: isLoading
+                              ? const Padding(
+                            padding: EdgeInsets.all(20),
+                            child: Center(
+                              child: CircularProgressIndicator(),
+                            ),
+                          )
+                              : tracks.isEmpty
+                              ? const Padding(
+                            padding: EdgeInsets.all(20),
+                            child: Center(
+                              child: Text("No tracks found"),
+                            ),
+                          )
+                              : Column(
+                            children:
+                            List.generate(tracks.length, (index) {
+                              final track = tracks[index];
+
+                              return Padding(
+                                padding: EdgeInsets.only(
+                                  bottom: index == tracks.length - 1
+                                      ? 0
+                                      : 12,
+                                ),
+                                child: GestureDetector(
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            Levelscreen(
+                                              trackId: track.id,
+                                            ),
+                                      ),
+                                    );
+                                  },
+                                  child: AnimatedContainer(
+                                    duration: const Duration(
+                                      milliseconds: 100,
+                                    ),
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.all(8),
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius:
+                                      BorderRadius.circular(15),
+                                      boxShadow: const [
+                                        BoxShadow(
+                                          color: Colors.black12,
+                                          blurRadius: 5,
+                                          offset: Offset(0, 5),
+                                        ),
+                                      ],
+                                    ),
+                                    child: Column(
+                                      children: [
+                                        ClipRRect(
+                                          borderRadius:
+                                          BorderRadius.circular(
+                                            12,
+                                          ),
+                                          child: Image(
+                                            image: AssetImage(
+                                              getTrackImage(index),
+                                            ),
+                                            width: double.infinity,
+                                            height:
+                                            isSmall ? 115 : null,
+                                            fit: BoxFit.cover,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 8),
+                                        Text(
+                                          track.name,
+                                          style: const TextStyle(
+                                            fontSize: 16,
+                                            fontWeight:
+                                            FontWeight.bold,
+                                          ),
+                                        ),
+                                        const SizedBox(height: 5),
+                                        Text(
+                                          track.description,
+                                          style: const TextStyle(
+                                            fontSize: 14,
+                                            color: Colors.black54,
+                                          ),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                              );
+                            }),
                           ),
                         ),
-                      ),
-                    ],
-                  ),
 
-                  const SizedBox(height: 20),
+                        SizedBox(height: isSmall ? 25 : 40),
 
-                  // 🔹 زر Next → يروح لصفحة Levelscreen
-                  GestureDetector(
-                    onTap: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(builder: (context) => const Levelscreen()),
-                      );
-                    },
-                    child: Container(
-                      width: double.infinity,
-                      height: 56,
-                      decoration: BoxDecoration(
-                        color: const Color(0xff0665BC),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: const Center(
-                        child: Text(
-                          "Next",
-                          style: TextStyle(fontSize: 17, color: Colors.white),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Container(
+                              width: 60,
+
+                              height: 60,
+                              decoration: BoxDecoration(
+                                color: Colors.grey[200],
+                                shape: BoxShape.circle,
+                              ),
+                              child: Center(
+                                child: Image.asset(
+                                  "images/Reddit (1).png",
+                                  width: 30,
+                                  height: 30,
+                                ),
+                              ),
+                            ),
+                            const SizedBox(width: 10),
+                            Expanded(
+                              child: Container(
+                                padding: const EdgeInsets.all(8),
+                                decoration: BoxDecoration(
+                                  color: Colors.grey[100],
+                                  borderRadius: BorderRadius.circular(15),
+                                ),
+                                child: const Text(
+                                  "Let me know your goal, and I’ll guide you to the right lessons",
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.black87,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
-                      ),
+
+                        const SizedBox(height: 40),
+
+                        if (DioClient.isAdmin())
+                          ElevatedButton(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                  const AdminScreen(),
+                                ),
+                              );
+                            },
+                            child: const Text("Open Admin Panel"),
+                          ),
+                      ],
                     ),
                   ),
-
-                  const SizedBox(height: 40),
-                ],
-              ),
-            ),
+                ),
+              );
+            },
           ),
         ],
       ),

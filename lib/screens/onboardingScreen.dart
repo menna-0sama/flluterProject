@@ -1,109 +1,251 @@
 import 'package:flutter/material.dart';
 import 'onboardingScreen2.dart';
-class OnboardingPage1 extends StatelessWidget {
+
+class OnboardingPage1 extends StatefulWidget {
   const OnboardingPage1({super.key});
 
   @override
+  State<OnboardingPage1> createState() => _OnboardingPage1State();
+}
+
+class _OnboardingPage1State extends State<OnboardingPage1>
+    with SingleTickerProviderStateMixin {
+  late AnimationController _controller;
+
+  late Animation<double> _fadeAnimation;
+  late Animation<Offset> _imageSlideAnimation;
+  late Animation<Offset> _textSlideAnimation;
+  late Animation<double> _buttonScaleAnimation;
+
+  @override
+  void initState() {
+    super.initState();
+
+    _controller = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1200),
+    );
+
+    _fadeAnimation = Tween<double>(
+      begin: 0,
+      end: 1,
+    ).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: Curves.easeIn,
+      ),
+    );
+
+    _imageSlideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.18),
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: Curves.easeOut,
+      ),
+    );
+
+    _textSlideAnimation = Tween<Offset>(
+      begin: const Offset(0, 0.25),
+      end: Offset.zero,
+    ).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: Curves.easeOutCubic,
+      ),
+    );
+
+    _buttonScaleAnimation = Tween<double>(
+      begin: 0.75,
+      end: 1,
+    ).animate(
+      CurvedAnimation(
+        parent: _controller,
+        curve: Curves.easeOutBack,
+      ),
+    );
+
+    _controller.forward();
+  }
+
+  @override
+  void dispose() {
+    _controller.dispose();
+    super.dispose();
+  }
+
+  Widget animatedCircle(Widget child) {
+    return FadeTransition(
+      opacity: _fadeAnimation,
+      child: ScaleTransition(
+        scale: _buttonScaleAnimation,
+        child: child,
+      ),
+    );
+  }
+
+  @override
   Widget build(BuildContext context) {
+    final width = MediaQuery.of(context).size.width;
+    final height = MediaQuery.of(context).size.height;
+
+    final isSmall = height < 700;
+
     return Scaffold(
       backgroundColor: Colors.white,
       body: SafeArea(
         child: Stack(
           children: [
-
             Positioned(
-              top: 50,
-              left: 30,
-              child: Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: Colors.orange.shade200,
-                  shape: BoxShape.circle,
-                ),
-              ),
-            ),
-            Positioned(
-              top: 80,
-              left: 150,
-              child: Container(
-                width: 40,
-                height: 40,
-                decoration: BoxDecoration(
-                  color: Colors.pink.shade400,
-                  shape: BoxShape.circle,
-                ),
-              ),
-            ),
-            Positioned(
-              top: 20,
-              right: 40,
-              child: Container(
-                width: 60,
-                height: 60,
-                decoration: BoxDecoration(
-                  color: Colors.purple.shade200,
-                  shape: BoxShape.circle,
-                ),
-              ),
-            ),
-
-            // المحتوى الرئيسي
-            Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Image.asset(
-                  "images/Image 2.png",
-                  width: 300,
-                  height: 236,
-                ),
-                const SizedBox(height: 60),
-
-                const Text(
-                  'Welcome to Code Craft',
-                  style: TextStyle(
-                    fontSize: 32,
-                    fontWeight: FontWeight.bold,
+              top: height * 0.06,
+              left: width * 0.07,
+              child: animatedCircle(
+                Container(
+                  width: isSmall ? 30 : 40,
+                  height: isSmall ? 30 : 40,
+                  decoration: BoxDecoration(
+                    color: Colors.orange.shade200,
+                    shape: BoxShape.circle,
                   ),
                 ),
+              ),
+            ),
 
-                const SizedBox(height: 25),
+            Positioned(
+              top: height * 0.10,
+              left: width * 0.35,
+              child: animatedCircle(
+                Container(
+                  width: isSmall ? 30 : 40,
+                  height: isSmall ? 30 : 40,
+                  decoration: BoxDecoration(
+                    color: Colors.pink.shade400,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+            ),
 
-                const Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 40),
-                  child: Text(
-                    'Learn to code step-by-step with interactive tracks.',
-                    textAlign: TextAlign.start,
-                    style: TextStyle(
-                      fontSize: 20,
-                      color: Colors.black54,
+            Positioned(
+              top: height * 0.03,
+              right: width * 0.08,
+              child: animatedCircle(
+                Container(
+                  width: isSmall ? 45 : 60,
+                  height: isSmall ? 45 : 60,
+                  decoration: BoxDecoration(
+                    color: Colors.purple.shade200,
+                    shape: BoxShape.circle,
+                  ),
+                ),
+              ),
+            ),
+
+            Center(
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: width * 0.08,
+                  ),
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      SizedBox(height: height * 0.05),
+
+                      FadeTransition(
+                        opacity: _fadeAnimation,
+                        child: SlideTransition(
+                          position: _imageSlideAnimation,
+                          child: Image.asset(
+                            "images/Image 2.png",
+                            width: width * 0.70,
+                            height: height * 0.30,
+                            fit: BoxFit.contain,
+                          ),
+                        ),
+                      ),
+
+                      SizedBox(height: height * 0.05),
+
+                      FadeTransition(
+                        opacity: _fadeAnimation,
+                        child: SlideTransition(
+                          position: _textSlideAnimation,
+                          child: Text(
+                            'Welcome to Code Craft',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              fontSize: isSmall ? 24 : 28,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      SizedBox(height: height * 0.03),
+
+                      FadeTransition(
+                        opacity: _fadeAnimation,
+                        child: SlideTransition(
+                          position: _textSlideAnimation,
+                          child: Padding(
+                            padding: EdgeInsets.symmetric(
+                              horizontal: width * 0.03,
+                            ),
+                            child: Text(
+                              'Learn to code step-by-step with interactive tracks.',
+                              textAlign: TextAlign.center,
+                              style: TextStyle(
+                                fontSize: isSmall ? 16 : 20,
+                                color: Colors.black54,
+                                height: 1.5,
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+
+                      SizedBox(height: height * 0.10),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+
+            Positioned(
+              bottom: height * 0.05,
+              right: width * 0.08,
+              child: ScaleTransition(
+                scale: _buttonScaleAnimation,
+                child: FadeTransition(
+                  opacity: _fadeAnimation,
+                  child: ElevatedButton(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => Onboardingscreen2(),
+                        ),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF0E65B4),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isSmall ? 18 : 20,
+                        vertical: isSmall ? 13 : 15,
+                      ),
+                    ),
+                    child: Icon(
+                      Icons.arrow_forward,
+                      color: Colors.white,
+                      size: isSmall ? 22 : 25,
                     ),
                   ),
                 ),
-              ],
-            ),
-
-            // ✅ الزرار (بره الـ Column)
-            Positioned(
-              bottom: 50,
-              right: 40,
-              child: ElevatedButton(
-                onPressed: () {
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => Onboardingscreen2(),
-                    ),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Color(0xFF0E65B4),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(8),
-                  ),
-                  padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
-                ),
-                child: const Icon(Icons.arrow_forward, color: Colors.white),
               ),
             ),
           ],

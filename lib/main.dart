@@ -1,14 +1,24 @@
 import 'package:flutter/material.dart';
 import 'package:graduation/network/dio_client.dart';
-import 'package:graduation/screens/welcomScreen.dart';
+import 'package:graduation/provider/auth_provider.dart';
+import 'package:graduation/screens/splash_screen.dart';
+import 'package:provider/provider.dart';
 
-void main() {
+void main() async {
   WidgetsFlutterBinding.ensureInitialized();
 
-  // 🔥 تشغيل Dio + Interceptor
-  DioClient.init();
+  await DioClient.init();
 
-  runApp(const MyApp());
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(
+          create: (_) => AuthProvider(),
+        ),
+      ],
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -16,9 +26,9 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
+    return const MaterialApp(
       debugShowCheckedModeBanner: false,
-      home: const Welcomscreen(),
+      home: SplashScreen(),
     );
   }
 }

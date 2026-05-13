@@ -1,8 +1,11 @@
-
+import 'dart:convert';
 import 'package:dio/dio.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 class DioClient {
-  // 🔵 Base URL
+  static String? accessToken;
+  static String? refreshToken;
+
   static final Dio dio = Dio(
     BaseOptions(
       baseUrl: "http://81.17.102.211:5000",
@@ -11,51 +14,47 @@ class DioClient {
       headers: {
         "Content-Type": "application/json",
       },
-
-      // 🔥 أهم تعديل لحل مشكلة تحويل النجاح لـ Error
       validateStatus: (status) {
         return status != null && status < 500;
       },
     ),
   );
 
-  // 🔐 التوكنات
-  static String? accessToken;
-  static String? refreshToken;
+  static Future<void> init() async {
+    await loadTokens();
 
-  // 🚀 Init Interceptor
-  static void init() {
+    dio.interceptors.clear();
+
     dio.interceptors.add(
       InterceptorsWrapper(
-        // 🟢 قبل أي request
         onRequest: (options, handler) {
-          if (accessToken != null) {
+          if (accessToken != null && accessToken!.isNotEmpty) {
             options.headers["Authorization"] = "Bearer $accessToken";
           }
 
+          print("➡️ REQUEST: ${options.method} ${options.path}");
+          print("🔐 TOKEN: $accessToken");
+
           return handler.next(options);
         },
-
-        // 🔴 عند حدوث خطأ
         onError: (DioException error, handler) async {
-          if (error.response?.statusCode == 401) {
+          if (error.response?.statusCode == 401 && refreshToken != null) {
             print("🔄 Token expired → trying refresh");
 
             final newToken = await refreshTokenRequest();
 
             if (newToken != null) {
-              accessToken = newToken;
-
               final retryResponse = await dio.request(
                 error.requestOptions.path,
+                data: error.requestOptions.data,
+                queryParameters: error.requestOptions.queryParameters,
                 options: Options(
                   method: error.requestOptions.method,
                   headers: {
                     "Authorization": "Bearer $newToken",
+                    "Content-Type": "application/json",
                   },
                 ),
-                data: error.requestOptions.data,
-                queryParameters: error.requestOptions.queryParameters,
               );
 
               return handler.resolve(retryResponse);
@@ -68,7 +67,62 @@ class DioClient {
     );
   }
 
-  // 🔥 Refresh Token
+  static bool isAdmin() {
+    if (accessToken == null || accessToken!.isEmpty) return false;
+
+    try {
+      final parts = accessToken!.split('.');
+      if (parts.length != 3) return false;
+
+      final payload = parts[1];
+      final normalized = base64Url.normalize(payload);
+      final decoded = utf8.decode(base64Url.decode(normalized));
+      final data = jsonDecode(decoded);
+
+      final role = data[
+      "http://schemas.microsoft.com/ws/2008/06/identity/claims/role"];
+
+      return role == "Admin";
+    } catch (e) {
+      print("❌ ROLE DECODE ERROR: $e");
+      return false;
+    }
+  }
+
+  static Future<void> saveTokens({
+    required String token,
+    required String refresh,
+  }) async {
+    accessToken = token;
+    refreshToken = refresh;
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString("accessToken", token);
+    await prefs.setString("refreshToken", refresh);
+
+    print("✅ TOKENS SAVED");
+  }
+
+  static Future<void> loadTokens() async {
+    final prefs = await SharedPreferences.getInstance();
+
+    accessToken = prefs.getString("accessToken");
+    refreshToken = prefs.getString("refreshToken");
+
+    print("✅ TOKENS LOADED: $accessToken");
+  }
+
+  static Future<void> clearTokens() async {
+    accessToken = null;
+    refreshToken = null;
+
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.remove("accessToken");
+    await prefs.remove("refreshToken");
+
+    print("🗑 TOKENS CLEARED");
+  }
+
   static Future<String?> refreshTokenRequest() async {
     try {
       final response = await dio.post(
@@ -80,9 +134,31 @@ class DioClient {
 
       print("🔐 Refresh Response: ${response.data}");
 
-      final newToken = response.data["accessToken"];
+      final data = response.data;
 
-      return newToken;
+      if (data is Map && data["data"] != null) {
+        final newAccessToken = data["data"]["token"];
+        final newRefreshToken = data["data"]["refreshToken"];
+
+        await saveTokens(
+          token: newAccessToken,
+          refresh: newRefreshToken,
+        );
+
+        return newAccessToken;
+      }
+
+      final newAccessToken = data["accessToken"] ?? data["token"];
+      final newRefreshToken = data["refreshToken"] ?? refreshToken;
+
+      if (newAccessToken != null && newRefreshToken != null) {
+        await saveTokens(
+          token: newAccessToken,
+          refresh: newRefreshToken,
+        );
+      }
+
+      return newAccessToken;
     } catch (e) {
       print("❌ Refresh failed: $e");
       return null;

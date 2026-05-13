@@ -1,8 +1,6 @@
 import 'dio_client.dart';
 
 class AuthApi {
-
-  // 🆕 REGISTER
   Future registerUser({
     required String firstName,
     required String lastName,
@@ -26,7 +24,6 @@ class AuthApi {
     return response.data;
   }
 
-  // 🔐 LOGIN
   Future loginUser({
     required String email,
     required String password,
@@ -39,14 +36,27 @@ class AuthApi {
       },
     );
 
-    // 🔥 حفظ التوكن
-    DioClient.accessToken = response.data["accessToken"];
-    DioClient.refreshToken = response.data["refreshToken"];
+    final data = response.data;
 
-    return response.data;
+    print("LOGIN RESPONSE: $data");
+
+    final token = data["token"] ?? data["data"]?["token"];
+    final refreshToken = data["refreshToken"] ?? data["data"]?["refreshToken"];
+
+    if (token == null || refreshToken == null) {
+      throw Exception("Login failed: token not found in response");
+    }
+
+    await DioClient.saveTokens(
+      token: token,
+      refresh: refreshToken,
+    );
+
+    print("✅ TOKEN SAVED PERMANENTLY");
+
+    return data;
   }
 
-  // 🔵 GOOGLE LOGIN (إضافة جديدة فقط)
   Future googleLogin({
     required String idToken,
   }) async {
@@ -57,10 +67,24 @@ class AuthApi {
       },
     );
 
-    // 🔥 حفظ التوكن بعد Google login
-    DioClient.accessToken = response.data["accessToken"];
-    DioClient.refreshToken = response.data["refreshToken"];
+    final data = response.data;
 
-    return response.data;
+    print("GOOGLE LOGIN RESPONSE: $data");
+
+    final token = data["token"] ?? data["data"]?["token"];
+    final refreshToken = data["refreshToken"] ?? data["data"]?["refreshToken"];
+
+    if (token == null || refreshToken == null) {
+      throw Exception("Google login failed: token not found in response");
+    }
+
+    await DioClient.saveTokens(
+      token: token,
+      refresh: refreshToken,
+    );
+
+    print("✅ GOOGLE TOKEN SAVED PERMANENTLY");
+
+    return data;
   }
 }
